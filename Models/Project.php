@@ -2,19 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
-
-    // Status constants
-    public const STATUS_DRAFT      = 'draft';
-    public const STATUS_PENDING    = 'pending';
-    public const STATUS_APPROVED   = 'approved';
-    public const STATUS_FUNDING    = 'funding';
-    public const STATUS_ACTIVE     = 'active';
-    public const STATUS_COMPLETED  = 'completed';
-    public const STATUS_DEFAULTED  = 'defaulted';
     protected $fillable = [
         'borrower_id',
         'category_id',
@@ -31,6 +23,7 @@ class Project extends Model
         'image',
     ];
     protected $casts = [
+        'status' => ProjectStatus::class,
         'reviewed_at' => 'datetime',
         'pre_approved_at' => 'datetime',
         'open_for_investment_at' => 'datetime',
@@ -50,44 +43,45 @@ class Project extends Model
             'repayment_started_at' => 'في مرحلة السداد',
         ];
     }
-    public function canChangeStatus(string $newStatus): bool
+    public function canChangeStatus(ProjectStatus $newStatus): bool
     {
         $allowedTransitions = [
-            self::STATUS_DRAFT    => [self::STATUS_PENDING],
-            self::STATUS_PENDING  => [self::STATUS_APPROVED],
-            self::STATUS_APPROVED => [self::STATUS_FUNDING],
-            self::STATUS_FUNDING  => [self::STATUS_ACTIVE],
-            self::STATUS_ACTIVE   => [self::STATUS_COMPLETED],
+            ProjectStatus::Draft     => [ProjectStatus::Pending],
+            ProjectStatus::Pending   => [ProjectStatus::Approved],
+            ProjectStatus::Approved  => [ProjectStatus::Funding],
+            ProjectStatus::Funding   => [ProjectStatus::Active],
+            ProjectStatus::Active    => [ProjectStatus::Completed],
         ];
 
-        return in_array($newStatus, $allowedTransitions[$this->status] ?? []);
+        return in_array($newStatus, $allowedTransitions[$this->status] ?? [], true);
     }
+
     public static function stageResetMap(): array
     {
         return [
-            self::STATUS_DRAFT => [
+            ProjectStatus::Draft => [
                 'reviewed_at',
                 'pre_approved_at',
                 'open_for_investment_at',
                 'funded_at',
                 'repayment_started_at',
             ],
-            self::STATUS_PENDING => [
+            ProjectStatus::Pending => [
                 'pre_approved_at',
                 'open_for_investment_at',
                 'funded_at',
                 'repayment_started_at',
             ],
-            self::STATUS_APPROVED => [
+            ProjectStatus::Approved => [
                 'open_for_investment_at',
                 'funded_at',
                 'repayment_started_at',
             ],
-            self::STATUS_FUNDING => [
+            ProjectStatus::Funding => [
                 'funded_at',
                 'repayment_started_at',
             ],
-            self::STATUS_ACTIVE => [
+            ProjectStatus::Active => [
                 'repayment_started_at',
             ],
         ];
