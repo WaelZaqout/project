@@ -50,17 +50,47 @@ class Project extends Model
             'repayment_started_at' => 'في مرحلة السداد',
         ];
     }
-      public function canChangeStatus(string $newStatus): bool
+    public function canChangeStatus(string $newStatus): bool
     {
-        $allowed = [
-            self::STATUS_DRAFT   => [self::STATUS_PENDING],
-            self::STATUS_PENDING => [self::STATUS_APPROVED],
-            self::STATUS_APPROVED=> [self::STATUS_FUNDING],
-            self::STATUS_FUNDING => [self::STATUS_ACTIVE],
-            self::STATUS_ACTIVE  => [self::STATUS_COMPLETED],
+        $allowedTransitions = [
+            self::STATUS_DRAFT    => [self::STATUS_PENDING],
+            self::STATUS_PENDING  => [self::STATUS_APPROVED],
+            self::STATUS_APPROVED => [self::STATUS_FUNDING],
+            self::STATUS_FUNDING  => [self::STATUS_ACTIVE],
+            self::STATUS_ACTIVE   => [self::STATUS_COMPLETED],
         ];
 
-        return in_array($newStatus, $allowed[$this->status] ?? []);
+        return in_array($newStatus, $allowedTransitions[$this->status] ?? []);
+    }
+    public static function stageResetMap(): array
+    {
+        return [
+            self::STATUS_DRAFT => [
+                'reviewed_at',
+                'pre_approved_at',
+                'open_for_investment_at',
+                'funded_at',
+                'repayment_started_at',
+            ],
+            self::STATUS_PENDING => [
+                'pre_approved_at',
+                'open_for_investment_at',
+                'funded_at',
+                'repayment_started_at',
+            ],
+            self::STATUS_APPROVED => [
+                'open_for_investment_at',
+                'funded_at',
+                'repayment_started_at',
+            ],
+            self::STATUS_FUNDING => [
+                'funded_at',
+                'repayment_started_at',
+            ],
+            self::STATUS_ACTIVE => [
+                'repayment_started_at',
+            ],
+        ];
     }
 
     public function borrower()
@@ -100,15 +130,14 @@ class Project extends Model
         return $this->funded_amount >= $this->funding_goal;
     }
     public function deleteImages()
-{
-    $this->images->each(function ($img) {
-        \Illuminate\Support\Facades\Storage::disk('public')->delete($img->image);
-        $img->delete();
-    });
+    {
+        $this->images->each(function ($img) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($img->image);
+            $img->delete();
+        });
 
-    if ($this->image) {
-        \Illuminate\Support\Facades\Storage::disk('public')->delete($this->image);
+        if ($this->image) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($this->image);
+        }
     }
-}
-
 }
