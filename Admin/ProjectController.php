@@ -20,10 +20,7 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $projects = Project::with('borrower')
-            ->when(
-                $request->filled('q'),
-                fn($q) => $q->where('title', 'like', '%' . $request->q . '%')
-            )
+            ->search($request->q)
             ->latest()
             ->paginate(10);
 
