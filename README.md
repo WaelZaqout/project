@@ -1,4 +1,4 @@
-# Project Management System (Laravel 10)
+# Project Management System (Laravel 12)
 
 ## 📌 Project Overview
 This is a demo **Project Management System**, designed to demonstrate clean architecture, service-based business logic, and best practices in Laravel development.
