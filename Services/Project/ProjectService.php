@@ -4,9 +4,11 @@ namespace App\Services\Project;
 
 use App\Models\Project;
 use Illuminate\Support\Str;
+use App\Enums\ProjectStatus;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class ProjectService
 {
@@ -15,30 +17,29 @@ class ProjectService
         return DB::transaction(function () use ($data, $borrowerId) {
 
             $data['borrower_id'] = $borrowerId;
-            $data['status'] ??= 'pending';
+            $data['status'] ??= ProjectStatus::Pending;
             $data['slug'] = $this->generateSlug($data['title']);
 
-            $image   = $data['image']   ?? null;
-            $gallery = $data['gallery'] ?? [];
+            $project = Project::create(collect($data)->except(['image', 'gallery'])->toArray());
 
-            unset($data['image'], $data['gallery']);
-
-            $project = Project::create($data);
-
-            if ($image instanceof UploadedFile) {
+            if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
                 $project->update([
-                    'image' => $image->store('projects', 'public')
+                    'image' => $data['image']->store('projects', 'public')
                 ]);
             }
 
-            foreach ($gallery as $file) {
-                $project->images()->create([
-                    'image' => $file->store('projects/gallery', 'public')
-                ]);
+            if (!empty($data['gallery'])) {
+                foreach ($data['gallery'] as $file) {
+                    if ($file instanceof UploadedFile) {
+                        $project->images()->create([
+                            'image' => $file->store('projects/gallery', 'public')
+                        ]);
+                    }
+                }
             }
 
             Log::info('Project created', [
-                'project_id' => $project->id,
+                'project_id'  => $project->id,
                 'borrower_id' => $borrowerId,
             ]);
 
@@ -50,20 +51,27 @@ class ProjectService
     {
         return DB::transaction(function () use ($project, $data) {
 
-            if (isset($data['title']) && $data['title'] !== $project->title) {
+            if (
+                isset($data['title']) &&
+                $data['title'] !== $project->title
+            ) {
                 $data['slug'] = $this->generateSlug($data['title'], $project->id);
             }
 
-            $image = $data['image'] ?? null;
-            unset($data['image']);
+            // تحديث البيانات فقط
+            $project->update(
+                collect($data)->except(['image', 'gallery'])->toArray()
+            );
 
-            $project->update($data);
+            // تحديث الصورة الرئيسية
+            if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
 
-            if ($image instanceof UploadedFile) {
-                $project->images()->delete();
+                if ($project->image) {
+                    Storage::disk('public')->delete($project->image);
+                }
 
-                $project->images()->create([
-                    'image' => $image->store('projects', 'public')
+                $project->update([
+                    'image' => $data['image']->store('projects', 'public')
                 ]);
             }
 
