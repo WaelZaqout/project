@@ -93,6 +93,13 @@ class Project extends Model
         ];
     }
 
+    public function scopeSearch($query, $term)
+    {
+        return $term
+            ? $query->where('title', 'like', "%{$term}%")
+            : $query;
+    }
+
     public function borrower()
     {
         return $this->belongsTo(User::class, 'borrower_id');
