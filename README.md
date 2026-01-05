@@ -45,6 +45,6 @@ The system allows **investors** and **borrowers** to manage projects, track thei
 ## 🛠️ Requirements
 
 - PHP >= 8.1
-- Laravel 10
+- Laravel 12
 - MySQL / MariaDB
 - Composer
